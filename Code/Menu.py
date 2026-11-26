@@ -1,45 +1,66 @@
-from tkinter.font import Font
-
 import pygame
-from pygame import Rect
-from pygame.surface import Surface
 
-from Code.Const import WIN_WIDTH, COLOR_ORANGE, MENU_OPTION, COLOR_WHITE
+from Code.Background import Background
+from Code.Const import COLOR_GREEN, COLOR_ORANGE, COLOR_WHITE, COLOR_YELLOW, FPS, MENU_OPTIONS, WIN_WIDTH
+from Code.Ui import draw_text, present
 
 
 class Menu:
-    def __init__(self, window):
+    def __init__(self, window, canvas):
         self.window = window
-        self.surf = pygame.image.load('./asset/MenuBg.png')
-        self.rect = self.surf.get_rect(left=0, top=0)
+        self.canvas = canvas
+        self.clock = pygame.time.Clock()
+        self.background = Background()
+        self.option = 0
 
-
-    def run (self):
-        # Carregando e reproduzindo musica do menu
-        pygame.mixer_music.load('./asset/menu.mp3')
-        pygame.mixer_music.play(-1)
+    def run(self):
         while True:
-            # CRIANDO IAMGEM INICIAL DO MENU
-            self.window.blit(source=self.surf, dest=self.rect)
-            #ADICIONANDO ESCRITA DE TEXTO NO MEUNU
-            self.menu_text(50, "Mountain", COLOR_ORANGE, ((WIN_WIDTH /2),70 ))
-            self.menu_text(50, "Shooter", COLOR_ORANGE, ((WIN_WIDTH / 2), 120))
-
-            # ADICIONANDO OPCOES DO MENU
-            # FOR PARA PERCORRER TODAS AS OPCOES DO MENU
-            for i in range (len(MENU_OPTION)):
-                self.menu_text(20, MENU_OPTION[i], COLOR_WHITE, ((WIN_WIDTH /2), 200 + 25 * i))
-
-            pygame.display.flip()
-            # Checando todos os ventos
+            dt = min(self.clock.tick(FPS) / 1000.0, 0.05)
             for event in pygame.event.get():
-                 if(event.type == pygame.QUIT):
-                     pygame.quit() # Fechar a janela
-                     quit # Encerrar inicializacao do pygame
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    raise SystemExit
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_DOWN, pygame.K_s):
+                        self.option = (self.option + 1) % len(MENU_OPTIONS)
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        self.option = (self.option - 1) % len(MENU_OPTIONS)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        return "start" if self.option == 0 else "quit"
+                    elif event.key == pygame.K_ESCAPE:
+                        return "quit"
 
+            self.background.update(dt, 28)
+            self._draw()
+            present(self.window, self.canvas)
 
-    def menu_text(self, text_size: int, text: str, text_color: tuple, text_center_pos: tuple):
-        text_font: Font =pygame.font.SysFont(name="Lucida Sans Typewriter", size=text_size)
-        text_surf: Surface = text_font.render(text, True, text_color).convert_alpha()
-        text_rect: Rect = text_surf.get_rect(center=text_center_pos)
-        self.window.blit(source=text_surf, dest=text_rect)
+    def _draw(self):
+        self.canvas.fill((0, 0, 0))
+        self.background.draw(self.canvas)
+        veil = pygame.Surface(self.canvas.get_size(), pygame.SRCALPHA)
+        veil.fill((0, 0, 0, 110))
+        self.canvas.blit(veil, (0, 0))
+        draw_text(self.canvas, "ZOMBIE", 42, COLOR_ORANGE, True, center=(WIN_WIDTH / 2, 52))
+        draw_text(self.canvas, "RUNNER", 42, COLOR_GREEN, True, center=(WIN_WIDTH / 2, 96))
+
+        for index, label in enumerate(MENU_OPTIONS):
+            color = COLOR_YELLOW if index == self.option else COLOR_WHITE
+            prefix = "> " if index == self.option else "  "
+            draw_text(
+                self.canvas,
+                prefix + label,
+                22,
+                color,
+                True,
+                center=(WIN_WIDTH / 2, 158 + index * 28),
+            )
+
+        instructions = (
+            "ESPACO: pular",
+            "SETA PARA BAIXO ou S: abaixar",
+            "ENTER: iniciar, confirmar ou reiniciar",
+            "ESC: voltar ao menu ou sair",
+            "SETAS: navegar nos menus e na selecao",
+        )
+        for index, line in enumerate(instructions):
+            draw_text(self.canvas, line, 15, COLOR_WHITE, center=(WIN_WIDTH / 2, 230 + index * 16))
